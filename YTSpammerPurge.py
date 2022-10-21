@@ -426,7 +426,7 @@ def main():
         sys.exit()
 
       # Set scanMode Variable Names
-      validModeValues = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'chosenvideos', 'recentvideos', 'entirechannel', 'communitypost', 'commentlist', 'recentcommunityposts']
+      validModeValues = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'chosenvideos', 'recentvideos', 'entirechannel', 'communitypost', 'commentlist', 'recentcommunityposts', 'days']
       if scanMode in validModeValues:
         validMode = True
         if scanMode == "1" or scanMode == "chosenvideos":
@@ -447,6 +447,8 @@ def main():
           scanMode = "recoverMode"
         elif scanMode == "9":
           scanMode = "checkUpdates"
+        elif scanMode == "days":
+          scanMode = "days"
       else:
         print(f"\nInvalid choice: {scanMode} - Enter a number from 1 to 9")
         validConfigSetting = False
@@ -882,6 +884,116 @@ def main():
       miscData.channelOwnerID = channelID
       miscData.channelOwnerName = channelTitle
 
+# ==================================================================== DAYS =============================================================================================================
+
+    # Recent Community Posts
+    elif scanMode == 'days':
+      confirm = False
+      validEntry = False
+      validChannel = False
+      
+      while validChannel == False:
+        # Get and verify config setting for channel ID
+        if config['channel_to_scan'] != 'ask':
+          if config['channel_to_scan'] == 'mine':
+            channelID = CURRENTUSER.id
+            channelTitle = CURRENTUSER.name
+            validChannel = True
+            break
+          else:
+            validChannel, channelID, channelTitle = validation.validate_channel_id(config['channel_to_scan'])
+            if validChannel == True:
+              break
+            else:
+              print("Invalid Channel ID or Link in config file!")
+
+        print(f"\nEnter a {F.YELLOW}channel ID or Link{S.R} to scan {F.LIGHTCYAN_EX}recent videos{S.R} from")
+        print(f"   > If scanning {F.YELLOW}your own channel{S.R}, just hit {F.LIGHTGREEN_EX}Enter{S.R}")
+        inputtedChannel = input("\nEnter Here: ")
+        if inputtedChannel == "":
+          channelID = CURRENTUSER.id
+          channelTitle = CURRENTUSER.name
+          validChannel = True
+        elif str(inputtedChannel).lower() == "x":
+          return True # Return to main menu
+        else:
+          validChannel, channelID, channelTitle = validation.validate_channel_id(inputtedChannel)
+
+      if CURRENTUSER.id != channelID:
+        userNotChannelOwner = True
+
+      print(f"\nChosen Channel: {F.LIGHTCYAN_EX}{channelTitle}{S.R}")
+      
+      # Get number of days back to scan, either from config or user input, and validate
+      while validEntry == False or confirm == False:
+        videosToScan=[]
+        validConfigSetting = True
+        if config['days'] != 'ask' and validConfigSetting == True:
+          numDays = config['days']
+          try:
+            numDays = int(numDays)
+            validEntry = True
+          except:
+            validConfigSetting = False
+            print("Invalid number entered in config file for days")
+            numDays = None
+        else:
+          print(f"\nEnter the {F.YELLOW}days{S.R} to scan back:")
+          numDays = input("\nNumber of Days: ")
+          print("")
+          if str(numDays).lower() == "x":
+            return True # Return to main menu
+
+        if validEntry == True:
+          # Fetch recent videos and print titles to user for confirmation
+          datetime_days = (datetime.now() - timedelta(numDays)).strftime('%Y-%m-%dT%H:%M:%SZ')
+          channelVideoList = auth.YOUTUBE.search().list(
+                part='snippet',
+                channelId=channelID,
+                publishedAfter=datetime_days,
+                maxResults=50,
+                type="video",
+                order='date',
+            ).execute()
+
+          for item in channelVideoList['items']:
+            videoID = str(item['id']['videoId'])
+            videoTitle = str(item['snippet']['title']).replace("&quot;", "\"").replace("&#39;", "'")
+            commentCount = validation.validate_video_id(videoID, pass_exception = True)[3]
+
+            videosToScan.append({
+              'videoID': videoID,
+              'videoTitle': videoTitle,
+              'commentCount': commentCount
+            })
+
+
+          if str(videosToScan) == "MainMenu":
+            return True # Return to main menu
+          if len(videosToScan) == 0:
+            print(f"\n{F.LIGHTRED_EX}Error:{S.R} No scannable videos found in selected range!  They all may have no comments and/or are live streams.")
+            if config['auto_close'] == True:
+              print("Auto-close enabled in config. Exiting in 5 seconds...")
+              time.sleep(5)
+              sys.exit()
+            else:
+              input("\nPress Enter to return to main menu...")
+              return True
+
+          # Get total comment count
+          miscData.totalCommentCount = 0
+          for video in videosToScan:
+            miscData.totalCommentCount += int(video['commentCount'])
+            
+          break # Back to main menu
+
+      miscData.channelOwnerID = channelID
+      miscData.channelOwnerName = channelTitle
+
+      
+
+
+
 # =============================================================================== OTHER MENU OPTIONS =============================================================================================
 
     # Create config file
@@ -1199,7 +1311,7 @@ def main():
         if status == "Error":
           pass
 
-      elif scanMode == "recentVideos" or scanMode == "chosenVideos":
+      elif scanMode == "recentVideos" or scanMode == "chosenVideos" or scanMode == "days":
         i = 1
         for video in videosToScan:
           currentVideoDict = {}

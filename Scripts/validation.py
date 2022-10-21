@@ -384,11 +384,12 @@ def validate_config_settings(config):
     'moderator_mode': (True, False),
     'auto_close': (True, False),
     'colors_enabled': (True, False),
-    'scan_mode': ('ask', 'chosenvideos', 'recentvideos', 'entirechannel', 'communitypost', 'recentcommunityposts'),
+    'scan_mode': ('ask', 'chosenvideos', 'recentvideos', 'entirechannel', 'communitypost', 'recentcommunityposts', 'days'),
     'max_comments': ('ask'), #
     #'videos_to_scan': None,
     #'channel_to_scan': None,
     'recent_videos_amount': ('ask'), #
+    'days': ('ask'), #
     'filter_mode': ('ask', 'id', 'username', 'text', 'nameandtext', 'autoascii', 'autosmart', 'sensitivesmart'),
     'filter_submode': ('ask', 'characters', 'strings', 'regex'),
     #'channel_ids_to_filter': None,
@@ -425,7 +426,7 @@ def validate_config_settings(config):
   }
 
   # Settings that can or must contain an integer
-  integerSettings = ['max_comments', 'recent_videos_amount', 'minimum_duplicates', 'quota_limit', 'config_version', 'stolen_minimum_text_length', 'minimum_duplicate_length']
+  integerSettings = ['max_comments', 'recent_videos_amount', 'minimum_duplicates', 'quota_limit', 'config_version', 'stolen_minimum_text_length', 'minimum_duplicate_length', 'days']
 
   # Dictionary of settings requiring specific checks, and the functions to validate them
   specialCheck = {

@@ -1,19 +1,17 @@
 FROM python:3-slim AS builder
 
-RUN apt-get update && \
-    apt-get install -y gcc
-COPY requirements.txt ./
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-FROM python:3-slim
-
 WORKDIR /usr/src/app
 RUN apt-get update && \
-    apt-get install -y libtk8.6 && \
+    apt-get install -y gcc libtk8.6 && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=builder /root/.local /root/.local
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY YTSpammerPurge.py ./
+COPY SpamPurgeConfig.ini ./
+COPY client_secrets.json ./
+COPY token.pickle ./
 ADD Scripts ./Scripts
 ADD assets ./assets
 

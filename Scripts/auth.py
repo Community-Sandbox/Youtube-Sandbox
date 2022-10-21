@@ -2,12 +2,14 @@
 # -*- coding: UTF-8 -*-
 from Scripts.shared_imports import *
 import Scripts.validation as validation
+import re
 
 # Google Authentication Modules
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from json import JSONDecodeError
 
@@ -40,18 +42,26 @@ def initialize():
 def get_authenticated_service():
   global YOUTUBE
   CLIENT_SECRETS_FILE = 'client_secrets.json'
+  SERVICE_ACCOUNT_FILE = ''
+
+  # See if Service Account creds exist 
+  for file in os.listdir():
+    if re.match(r".*\-[a-z0-9]{12}\.json", file) is not None:
+      SERVICE_ACCOUNT_FILE = file
+
+
   YOUTUBE_READ_WRITE_SSL_SCOPE = ['https://www.googleapis.com/auth/youtube.force-ssl']
   API_SERVICE_NAME = 'youtube'
   API_VERSION = 'v3'
   DISCOVERY_SERVICE_URL = "https://youtube.googleapis.com/$discovery/rest?version=v3" # If don't specify discovery URL for build, works in python but fails when running as EXE
 
-  # Check if client_secrets.json file exists, if not give error
-  if not os.path.exists(CLIENT_SECRETS_FILE):
+  # Check if client_secrets.json or sa_default.json file exists, if not give error
+  if not os.path.exists(CLIENT_SECRETS_FILE) and not SERVICE_ACCOUNT_FILE:
     # In case people don't have file extension viewing enabled, they may add a redundant json extension
     if os.path.exists(f"{CLIENT_SECRETS_FILE}.json"):
       CLIENT_SECRETS_FILE = CLIENT_SECRETS_FILE + ".json"
     else:
-      print(f"\n         ----- {F.WHITE}{B.RED}[!] Error:{S.R} client_secrets.json file not found -----")
+      print(f"\n         ----- {F.WHITE}{B.RED}[!] Error:{S.R} client_secrets.json(OAuth) or sa.json(Service Account) file not found -----")
       print(f" ----- Did you create a {F.YELLOW}Google Cloud Platform Project{S.R} to access the API? ----- ")
       print(f"  > For instructions on how to get an API key, visit: {F.YELLOW}TJoe.io/api-setup{S.R}")
       print(f"\n  > (Non-shortened Link: https://github.com/ThioJoe/YT-Spammer-Purge/wiki/Instructions:-Obtaining-an-API-Key)")
@@ -59,23 +69,30 @@ def get_authenticated_service():
       sys.exit()
 
   creds = None
-  # The file token.pickle stores the user's access and refresh tokens, and is
-  # created automatically when the authorization flow completes for the first time.
-  if os.path.exists(TOKEN_FILE_NAME):
-    creds = Credentials.from_authorized_user_file(TOKEN_FILE_NAME, scopes=YOUTUBE_READ_WRITE_SSL_SCOPE)
 
-  # If there are no (valid) credentials available, make the user log in.
-  if not creds or not creds.valid:
-    if creds and creds.expired and creds.refresh_token:
-      creds.refresh(Request())
-    else:
-      print(f"\nPlease {F.YELLOW}login using the browser window{S.R} that opened just now.\n")
-      flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=YOUTUBE_READ_WRITE_SSL_SCOPE)
-      creds = flow.run_local_server(port=0, authorization_prompt_message="Waiting for authorization. See message above.")
-      print(f"{F.GREEN}[OK] Authorization Complete.{S.R}")
-      # Save the credentials for the next run
-    with open(TOKEN_FILE_NAME, 'w') as token:
-      token.write(creds.to_json())
+  if SERVICE_ACCOUNT_FILE:
+    sa_creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=YOUTUBE_READ_WRITE_SSL_SCOPE)
+    creds = sa_creds.with_subject("jesse@communitysandbox.com") # Replace with automod@communitysandbox.com
+
+  else:
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first time.
+    if os.path.exists(TOKEN_FILE_NAME):
+      creds = Credentials.from_authorized_user_file(TOKEN_FILE_NAME, scopes=YOUTUBE_READ_WRITE_SSL_SCOPE)
+
+    # If there are no (valid) credentials available, make the user log in.
+    if not creds or not creds.valid:
+      if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+      else:
+        print(f"\nPlease {F.YELLOW}login using the browser window{S.R} that opened just now.\n")
+        flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=YOUTUBE_READ_WRITE_SSL_SCOPE)
+        creds = flow.run_local_server(port=0, authorization_prompt_message="Waiting for authorization. See message above.")
+        print(f"{F.GREEN}[OK] Authorization Complete.{S.R}")
+        # Save the credentials for the next run
+      with open(TOKEN_FILE_NAME, 'w') as token:
+        token.write(creds.to_json())
+  
   YOUTUBE = build(API_SERVICE_NAME, API_VERSION, credentials=creds, discoveryServiceUrl=DISCOVERY_SERVICE_URL)
   return YOUTUBE
 
@@ -169,6 +186,8 @@ def get_current_user(config):
     configMatch = None # Used only if channel ID is set in the config
   elif config['your_channel_id'] == "ask":
     configMatch = None
+  elif config['your_channel_id'] == "service_account":
+    configMatch = True
   elif validation.validate_channel_id(config['your_channel_id'])[0] == True:
     if config['your_channel_id'] == channelID:
       configMatch = True
