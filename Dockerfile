@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY YTSpammerPurge.py ./
 COPY SpamPurgeConfig.ini ./
 ADD Scripts ./Scripts
+ADD secrets ./secrets
 ADD assets ./assets
 
 CMD [ "python", "YTSpammerPurge.py" ]

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
+from pprint import pprint
 from Scripts.shared_imports import *
 import Scripts.validation as validation
 import json
 import re
+import os
 
 # Google Authentication Modules
 from googleapiclient.errors import HttpError
@@ -43,18 +45,32 @@ def initialize():
 def get_authenticated_service():
   global YOUTUBE
   CLIENT_SECRETS_FILE = 'client_secrets.json'
+  SECRET_FILE_PATH = 'secrets/'
   SERVICE_ACCOUNT_FILE = ''
+  
 
-  # See if Service Account creds exist 
-  for file in os.listdir('secrets'):
-    # Grab json files
-    if re.match(r".*\.json", file) is not None:
-      with open(f'secrets/{file}', 'r') as SA_FILE:
-        content = json.loads(SA_FILE.read())
-        # See if JSON content has service_account value
-        if content.get('type') == 'service_account':
-          SERVICE_ACCOUNT_FILE = f'secrets/{file}'
-          break
+  # Try environment varriable before checking for file
+  service_account_secret = os.getenv("service_account")
+
+  if service_account_secret:
+    service_account_secret = json.loads(service_account_secret)
+    SERVICE_ACCOUNT_FILE = f"{SECRET_FILE_PATH}{service_account_secret['private_key_id']}.json"
+    
+    with open(SERVICE_ACCOUNT_FILE, 'w') as SA_FILE:
+      SA_FILE.write(json.dumps(service_account_secret))
+    
+
+  else:
+    # See if Service Account creds file exist 
+    for file in os.listdir(SECRET_FILE_PATH):
+      # Grab json files
+      if re.match(r".*\.json", file) is not None:
+        with open(f'{SECRET_FILE_PATH}{file}', 'r') as SA_FILE:
+          content = json.loads(SA_FILE.read())
+          # See if JSON content has service_account value
+          if content.get('type') == 'service_account':
+            SERVICE_ACCOUNT_FILE = f'{SECRET_FILE_PATH}{file}'
+            break
 
 
 
