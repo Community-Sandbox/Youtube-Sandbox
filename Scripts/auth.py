@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 from Scripts.shared_imports import *
 import Scripts.validation as validation
+import json
 import re
 
 # Google Authentication Modules
@@ -45,9 +46,16 @@ def get_authenticated_service():
   SERVICE_ACCOUNT_FILE = ''
 
   # See if Service Account creds exist 
-  for file in os.listdir():
-    if re.match(r".*\-[a-z0-9]{12}\.json", file) is not None:
-      SERVICE_ACCOUNT_FILE = file
+  for file in os.listdir('secrets'):
+    # Grab json files
+    if re.match(r".*\.json", file) is not None:
+      with open(f'secrets/{file}', 'r') as SA_FILE:
+        content = json.loads(SA_FILE.read())
+        # See if JSON content has service_account value
+        if content.get('type') == 'service_account':
+          SERVICE_ACCOUNT_FILE = f'secrets/{file}'
+          break
+
 
 
   YOUTUBE_READ_WRITE_SSL_SCOPE = ['https://www.googleapis.com/auth/youtube.force-ssl']
@@ -55,7 +63,7 @@ def get_authenticated_service():
   API_VERSION = 'v3'
   DISCOVERY_SERVICE_URL = "https://youtube.googleapis.com/$discovery/rest?version=v3" # If don't specify discovery URL for build, works in python but fails when running as EXE
 
-  # Check if client_secrets.json or sa_default.json file exists, if not give error
+  # Check if client_secrets.json or service_account.json file exists, if not give error
   if not os.path.exists(CLIENT_SECRETS_FILE) and not SERVICE_ACCOUNT_FILE:
     # In case people don't have file extension viewing enabled, they may add a redundant json extension
     if os.path.exists(f"{CLIENT_SECRETS_FILE}.json"):

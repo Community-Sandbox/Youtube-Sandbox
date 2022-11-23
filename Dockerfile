@@ -10,9 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY YTSpammerPurge.py ./
 COPY SpamPurgeConfig.ini ./
-COPY client_secrets.json ./
-COPY token.pickle ./
 ADD Scripts ./Scripts
 ADD assets ./assets
 
-CMD [ "python", "./YTSpammerPurge.py" ]
+CMD [ "python", "YTSpammerPurge.py" ]
