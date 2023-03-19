@@ -538,6 +538,7 @@ def write_plaintext_log(fileName, newText=None, firstWrite=False, fullWrite=Fals
           if choice("Choice") == False:
             break 
 
+#TODO: Extend this to CSV for email
 ############################ JSON Log & File Handling ###############################
 def write_json_log(current, config, jsonSettingsDict, commentsDict, jsonDataDict=None):
   success = False
